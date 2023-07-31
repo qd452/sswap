@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
 import {Order, TokenAmount} from "../base/OrderStructs.sol";
@@ -42,6 +42,24 @@ library OrderLib {
                     order.nonce,
                     order.deadline,
                     order.chainId
+                )
+            );
+    }
+
+    /// @notice hash an Order object
+    /// @dev EIP-191 header and domain separator included
+    /// @param order The Order object to hash
+    /// @param domainSeparator the sswap domain separator
+    function hash(
+        Order memory order,
+        bytes32 domainSeparator
+    ) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    "\x19\x01", // EIP191: Indicates EIP712
+                    domainSeparator,
+                    OrderLib.hash(order)
                 )
             );
     }

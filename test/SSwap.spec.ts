@@ -51,6 +51,13 @@ describe("SSwap", () => {
       .approve(sswap.address, ethers.constants.MaxUint256);
   });
 
+  it("Domain separator", async () => {
+    console.log(sswap.DOMAIN_SEPARATOR);
+    expect(await sswap.domainSeparator()).to.equal(
+      "0xe3aed6b844f12106bbf0a011cff592a9138f93e50e4807cdabfcdc8c087604bd"
+    );
+  });
+
   it("orderHash calculation", async () => {
     const deadline = 16907348320;
 
@@ -65,6 +72,23 @@ describe("SSwap", () => {
     };
     expect(await sswap.orderHash(order)).to.equal(
       "0x3e5e25ff1e269e7c35726c7f718ed5f2b43b1e749f294ce81ef915f2094b0d63"
+    );
+  });
+
+  it("orderHashWithDomain calculation", async () => {
+    const deadline = 16907348320;
+
+    let order: Order = {
+      takerTokenAmount: { token: takerToken.address, amount: ONE },
+      taker: await taker.getAddress(),
+      makerTokenAmount: { token: makerToken.address, amount: ONE },
+      maker: await maker.getAddress(),
+      nonce: BigNumber.from(1),
+      deadline: deadline,
+      chainId: chainId,
+    };
+    expect(await sswap.orderHashWithDomain(order)).to.equal(
+      "0x11aa30d30688d3cf6a70b7df6e3e8ec6d1c86024d80b525432b69b3552492905"
     );
   });
 });
