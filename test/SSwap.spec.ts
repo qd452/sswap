@@ -1,13 +1,21 @@
 import hre, { ethers } from "hardhat";
 import { expect } from "chai";
-import { Signer, BigNumber } from "ethers";
+import { Signer, BigNumber, VoidSigner } from "ethers";
 import MockERC20Abi from "../abis/MockERC20.json";
 import { MockERC20 } from "./utils/contracts/MockERC20";
-import { Order, TokenAmount } from "./utils/order";
+import {
+  Order,
+  createOrderSignaure,
+  recoverOrderSigner,
+  ORDER_TYPES,
+  EIP712_ORDER_TYPES,
+} from "./utils/order";
 import { BlockchainTime } from "./utils/time";
 import exp from "constants";
+import { TypedDataUtils, SignTypedDataVersion } from "@metamask/eth-sig-util";
+import { bufferToHex } from "@ethereumjs/util";
 
-const ONE = BigNumber.from(10).pow(18);
+const ONE = "1000000000000000000";
 
 describe("SSwap", () => {
   let sswap: any;
@@ -66,12 +74,23 @@ describe("SSwap", () => {
       taker: await taker.getAddress(),
       makerTokenAmount: { token: makerToken.address, amount: ONE },
       maker: await maker.getAddress(),
-      nonce: BigNumber.from(1),
+      nonce: 1,
       deadline: deadline,
       chainId: chainId,
     };
     expect(await sswap.orderHash(order)).to.equal(
-      "0x3e5e25ff1e269e7c35726c7f718ed5f2b43b1e749f294ce81ef915f2094b0d63"
+      "0xcb4310af266814d553a25ff440adaae0c76e6d4fade1ef1158155e24ec8f8a6c"
+    );
+    const orderHash = bufferToHex(
+      TypedDataUtils.hashStruct(
+        "Order",
+        order,
+        EIP712_ORDER_TYPES,
+        SignTypedDataVersion.V4
+      )
+    );
+    expect(orderHash).to.equal(
+      "0xcb4310af266814d553a25ff440adaae0c76e6d4fade1ef1158155e24ec8f8a6c"
     );
   });
 
@@ -83,12 +102,72 @@ describe("SSwap", () => {
       taker: await taker.getAddress(),
       makerTokenAmount: { token: makerToken.address, amount: ONE },
       maker: await maker.getAddress(),
-      nonce: BigNumber.from(1),
+      nonce: 1,
       deadline: deadline,
       chainId: chainId,
     };
     expect(await sswap.orderHashWithDomain(order)).to.equal(
-      "0x11aa30d30688d3cf6a70b7df6e3e8ec6d1c86024d80b525432b69b3552492905"
+      "0xbc648a976563357535d57cd7e227d4940d3f68dc3bfe1072d0472ff0276f45ae"
     );
+  });
+
+  it("create Validate Signaure (PureJS)", async () => {
+    const deadline = 16907348320;
+
+    let order: Order = {
+      takerTokenAmount: {
+        token: takerToken.address,
+        amount: "1000000000000000000",
+      },
+      taker: await taker.getAddress(),
+      makerTokenAmount: {
+        token: makerToken.address,
+        amount: "1000000000000000000",
+      },
+      maker: await maker.getAddress(),
+      nonce: 1,
+      deadline: deadline,
+      chainId: chainId,
+    };
+
+    let signature = await createOrderSignaure(
+      maker as VoidSigner,
+      order,
+      sswap.address,
+      chainId
+    );
+
+    let signer = recoverOrderSigner(signature, order, sswap.address, chainId);
+
+    expect(order.maker.toLowerCase()).to.equal(signer);
+    await sswap.swap(order, signature);
+  });
+
+  it("Valid Swap", async () => {
+    const deadline = 16907348320;
+
+    let order: Order = {
+      takerTokenAmount: {
+        token: takerToken.address,
+        amount: "1000000000000000000",
+      },
+      taker: await taker.getAddress(),
+      makerTokenAmount: {
+        token: makerToken.address,
+        amount: "1000000000000000000",
+      },
+      maker: await maker.getAddress(),
+      nonce: 1,
+      deadline: deadline,
+      chainId: chainId,
+    };
+
+    let signature = await createOrderSignaure(
+      maker as VoidSigner,
+      order,
+      sswap.address,
+      chainId
+    );
+    await sswap.swap(order, signature);
   });
 });

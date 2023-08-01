@@ -7,25 +7,19 @@ import {Order, TokenAmount} from "../base/OrderStructs.sol";
 library OrderLib {
     bytes internal constant ORDER_TYPE =
         "Order(TokenAmount takerTokenAmount,address taker,TokenAmount makerTokenAmount,address maker,uint256 nonce,uint256 deadline,uint256 chainId)"
-        "TokenAmount(address token,utin256 amount)";
-    bytes32 internal constant ORDER_TYPE_HASH = keccak256(ORDER_TYPE);
+        "TokenAmount(address token,uint256 amount)";
+    bytes32 internal constant ORDER_TYPE_HASH =
+        keccak256(abi.encodePacked(ORDER_TYPE));
 
     bytes internal constant TOKEN_AMOUNT_TYPE =
-        "TokenAmount(address token,utin256 amount)";
+        "TokenAmount(address token,uint256 amount)";
     bytes32 internal constant TOKEN_AMOUNT_TYPE_HASH =
         keccak256(TOKEN_AMOUNT_TYPE);
 
     function hashTokenAmount(
         TokenAmount memory tokenAmount
     ) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    TOKEN_AMOUNT_TYPE_HASH,
-                    tokenAmount.token,
-                    tokenAmount.amount
-                )
-            );
+        return keccak256(abi.encode(TOKEN_AMOUNT_TYPE_HASH, tokenAmount));
     }
 
     /// @notice hash an Order object
