@@ -1,8 +1,16 @@
 # SSWAP
 
-Simple Swap
+realise a Simple Swap contract
 
 ## Quick Start
+
+```sh
+yarn install
+yarn compile
+yarn test
+```
+
+## Dev
 
 ```sh
 yarn init
