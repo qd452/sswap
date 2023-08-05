@@ -11,6 +11,8 @@ import {Order} from "./base/OrderStructs.sol";
 import {OrderLib} from "./lib/OrderLib.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {SignatureVerification} from "./lib/SignatureVerification.sol";
+import {ERC20} from "solmate/src/tokens/ERC20.sol";
+import {SafeTransferLib} from "solmate/src/utils/SafeTransferLib.sol";
 
 contract SSwap is SwapEvents, ISSwap, ReentrancyGuard, EIP712, Owned {
     using OrderLib for Order;
@@ -25,6 +27,8 @@ contract SSwap is SwapEvents, ISSwap, ReentrancyGuard, EIP712, Owned {
     mapping(address => uint256) internal nonceUsed;
 
     error NonceUsed();
+    error OrderExpired();
+    error InvalidSender();
 
     constructor(
         address _owner
@@ -37,7 +41,29 @@ contract SSwap is SwapEvents, ISSwap, ReentrancyGuard, EIP712, Owned {
         Order calldata order,
         bytes calldata sig
     ) external payable nonReentrant {
-        _check(order, sig);
+        bytes32 _orderHash = _check(order, sig);
+        SafeTransferLib.safeTransferFrom(
+            order.takerTokenAmount.token,
+            order.taker,
+            order.maker,
+            order.takerTokenAmount.amount
+        );
+        SafeTransferLib.safeTransferFrom(
+            order.makerTokenAmount.token,
+            order.maker,
+            order.taker,
+            order.makerTokenAmount.amount
+        );
+        emit Swap(
+            _orderHash,
+            order.maker,
+            order.taker,
+            order.nonce,
+            address(order.makerTokenAmount.token),
+            order.makerTokenAmount.amount,
+            address(order.takerTokenAmount.token),
+            order.takerTokenAmount.amount
+        );
     }
 
     function orderHash(Order calldata order) external pure returns (bytes32) {
@@ -54,12 +80,25 @@ contract SSwap is SwapEvents, ISSwap, ReentrancyGuard, EIP712, Owned {
         return DOMAIN_SEPARATOR;
     }
 
-    function _check(Order memory order, bytes memory sig) internal view {
+    function _check(
+        Order memory order,
+        bytes memory sig
+    ) internal view returns (bytes32) {
         bytes32 orderTypedDataHash = order.hash(DOMAIN_SEPARATOR);
         sig.verify(orderTypedDataHash, order.maker);
+
+        if (order.taker != msg.sender) {
+            revert InvalidSender();
+        }
 
         if (order.nonce <= nonceUsed[order.maker]) {
             revert NonceUsed();
         }
+
+        if (block.timestamp > order.deadline) {
+            revert OrderExpired();
+        }
+
+        return orderTypedDataHash;
     }
 }

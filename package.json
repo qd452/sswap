@@ -16,6 +16,7 @@
     "@types/mocha": ">=9.1.0",
     "@types/node": ">=16.0.0",
     "chai": "^4.2.0",
+    "ethereum-waffle": "^4.0.10",
     "ethers": "5.7.2",
     "hardhat": "2.14.0",
     "hardhat-gas-reporter": "^1.0.8",

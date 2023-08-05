@@ -25,3 +25,15 @@ yarn add --dev ethers@5.7.2
 npx hardhat compile
 npx hardhat test
 ```
+
+## Design Considerations
+
+### EIP-712
+
+for the signature validatiaon
+
+### Nonce
+
+Nonce must be incremental, but not necessarily to consecutive; However if it is not consecutive, it is not gas efficient.
+
+bitmap to save gas, see [Bitmap_Example](docs/bitmap_nonce.py)
