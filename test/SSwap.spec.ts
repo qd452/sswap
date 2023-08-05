@@ -231,10 +231,36 @@ describe("SSwap", () => {
       expect(makerTakerBalInc.toString()).to.equal(ONE.toString());
     });
 
+    it("Valid Swap Emit", async () => {
+      const deadline = 16907348320;
+
+      let order = await createDefaultOrder(deadline, 2);
+
+      let signature = await createOrderSignaure(
+        maker as VoidSigner,
+        order,
+        sswap.address,
+        chainId
+      );
+
+      await expect(sswap.connect(taker).swap(order, signature))
+        .to.be.emit(sswap, "Swap")
+        .withArgs(
+          "0x04561d5b0ca4c80fe57f8feb0fb93619df1ea328a4118fca21defbd312fc3505",
+          order.maker,
+          order.taker,
+          order.nonce,
+          order.makerTokenAmount.token,
+          order.makerTokenAmount.amount,
+          order.takerTokenAmount.token,
+          order.takerTokenAmount.amount
+        );
+    });
+
     it("Invalid Swap - Expire", async () => {
       const deadline = await new BlockchainTime().secondsFromNow(-12);
 
-      let order = await createDefaultOrder(deadline);
+      let order = await createDefaultOrder(deadline, 3);
 
       let signature = await createOrderSignaure(
         maker as VoidSigner,
@@ -251,7 +277,7 @@ describe("SSwap", () => {
     it("Invalid Swap - Invalid Sender", async () => {
       const deadline = await new BlockchainTime().secondsFromNow(24);
 
-      let order = await createDefaultOrder(deadline);
+      let order = await createDefaultOrder(deadline, 4);
 
       let signature = await createOrderSignaure(
         maker as VoidSigner,
@@ -263,6 +289,33 @@ describe("SSwap", () => {
       await expect(sswap.swap(order, signature)).to.be.revertedWith(
         "InvalidSender"
       );
+    });
+
+    it("Invalid Swap - Invalid Nonce", async () => {
+      const deadline = await new BlockchainTime().secondsFromNow(24);
+
+      let order = await createDefaultOrder(deadline, 20);
+
+      let signature = await createOrderSignaure(
+        maker as VoidSigner,
+        order,
+        sswap.address,
+        chainId
+      );
+
+      await sswap.connect(taker).swap(order, signature);
+
+      order = await createDefaultOrder(deadline, 10);
+      signature = await createOrderSignaure(
+        maker as VoidSigner,
+        order,
+        sswap.address,
+        chainId
+      );
+
+      await expect(
+        sswap.connect(taker).swap(order, signature)
+      ).to.be.revertedWith("NonceUsed");
     });
   });
 });

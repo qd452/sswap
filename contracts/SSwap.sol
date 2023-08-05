@@ -42,6 +42,9 @@ contract SSwap is SwapEvents, ISSwap, ReentrancyGuard, EIP712, Owned {
         bytes calldata sig
     ) external payable nonReentrant {
         bytes32 _orderHash = _check(order, sig);
+
+        nonceUsed[order.maker] = order.nonce;
+
         SafeTransferLib.safeTransferFrom(
             order.takerTokenAmount.token,
             order.taker,
@@ -98,7 +101,6 @@ contract SSwap is SwapEvents, ISSwap, ReentrancyGuard, EIP712, Owned {
         if (block.timestamp > order.deadline) {
             revert OrderExpired();
         }
-
         return orderTypedDataHash;
     }
 }
